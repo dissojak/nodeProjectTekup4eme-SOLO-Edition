@@ -9,11 +9,35 @@ Copy this entire prompt and give it to your AI agent. Attach/expand the files an
 ```
 I'm working on a Node.js REST API project called "Recouvra+" (debt collection management // u can read this file Recouvra__API_de_gestion_du_recouvremen.pdf ). My teammate Adem already completed steps 1-4. I need to continue from step 5.
 
+## Overall architecture:
+This is a **debt collection REST API** with user roles, invoice management, payments, and recovery actions. It uses Express.js + MongoDB + JWT auth.
+
+**API endpoints structure:**
+- `POST /api/auth/register`, `POST /api/auth/login` (done)
+- `GET /api/clients`, `POST /api/clients`, `GET /api/clients/:id`, etc. (Adem will do)
+- `GET /api/invoices`, `POST /api/invoices`, etc. (I will implement)
+- `GET /api/payments`, `POST /api/payments` (Adem will do)
+- `GET /api/recovery`, `POST /api/recovery` (I will implement)
+- `GET /api/users`, `DELETE /api/users/:id` (I will implement)
+- `GET /api/stats/invoices`, `GET /api/stats/recovery` (I will implement)
+
+**User roles & auth:**
+- Roles: `agent`, `manager`, `admin`
+- Auth: JWT in httpOnly cookie, expires 30 days
+- Middleware: `protect` (must be logged in), `authorize('role1','role2')` (role-based access)
+
 ## What's already done (DO NOT redo these):
 - Step 1: Project setup (Express, Mongoose, dependencies, folder structure)
 - Step 2: All 5 models (User, Client, Invoice, Payment, RecoveryAction) + HttpError utility
 - Step 3: JWT auth middleware (protect, authorize) + generateToken utility
 - Step 4: Auth controller & routes (register, login, logout, getMe)
+
+## Database models (already created by Adem):
+- **User** — name, email, password (hashed with bcrypt), role (agent/manager/admin), timestamps
+- **Client** — name, email, phone, address, createdBy→User, timestamps
+- **Invoice** — invoiceNumber (unique), client, amount, amountPaid, dueDate, status (unpaid/partially_paid/paid/overdue), createdBy→User, timestamps
+- **Payment** — invoice, amount, paymentDate, paymentMethod (cash/check/transfer), note, recordedBy→User, timestamps
+- **RecoveryAction** — invoice, client, actionType (phone_call/email/letter/visit/legal), note, result, actionDate, performedBy→User, timestamps
 
 ## My steps to implement (in order):
 1. Step 5: Error handling and validation middleware → `Baha: add error handling and validation middleware`
@@ -37,17 +61,26 @@ So I need to implement ONLY my steps. But some of my steps depend on Adem's work
 Read all 3 files in the `plan/Rules/` folder carefully:
 - `plan/Rules/coding-style.md` — How to write code (minimal comments, no over-commenting)
 - `plan/Rules/git-workflow.md` — Commit messages must start with "Baha:" 
-- `plan/Rules/architecture.md` — Project structure and conventions
+- `plan/Rules/architecture.md` — Project structure, design patterns, and conventions
 
-Key rules summary:
+### Design patterns used in this project:
+1. **MVC** — Models in `models/`, Controllers in `controllers/`, Routes as view layer
+2. **Singleton** — `config/db.js` creates one shared DB connection (reuse, don't create new)
+3. **Chain of Responsibility** — Middleware chain (helmet → cors → morgan → json → cookies → auth → routes)
+4. **Decorator** — `asyncHandler` wraps functions to catch async errors (use everywhere in controllers)
+5. **Factory** — `HttpError` creates error objects with HTTP status codes (always use for throwing errors)
+6. **Strategy** — Recovery action types and payment methods use enums (implement in models via Mongoose enums)
+
+### Key rules summary:
 - NO over-commenting. Don't comment every line. Teacher will flag it as AI-generated.
 - Controllers get ONLY `@desc`, `@route`, `@access` header (3 lines). Maybe 1-2 inline comments for non-obvious logic.
 - Models, validators, routes = NO comments (the code speaks for itself)
-- Use `HttpError` from `utils/HttpError.js` for errors
-- Use `express-async-handler` to wrap async controllers
-- Use `express-validator` for validation (NOT Joi)
-- Return validation errors as: `res.status(400).json({ errors: errors.array() })`
+- Use `HttpError` from `utils/HttpError.js` for errors with status codes
+- Wrap ALL async controller functions with `express-async-handler`
+- Use `express-validator` for input validation (NOT Joi)
+- Return validation errors as: `return res.status(400).json({ errors: errors.array() })`
 - All commit messages start with `Baha:` — use the exact message from the plan file
+- Follow the same code style as `controllers/authController.js` and `middleware/authMiddleware.js`
 
 ## Process for each step:
 1. Read the plan file for that step (e.g., `plan/step-05-baha-error-validation-middleware.md`)
